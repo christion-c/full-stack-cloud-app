@@ -14,7 +14,10 @@ const enableCloudFront = cfg.getBoolean("enableCloudFront") ?? false;
 const vpc = new awsx.ec2.Vpc("app-vpc", {
   numberOfAvailabilityZones: 2,
   natGateways: { strategy: "None" },
-  subnets: [{ type: "public", name: "public" }, { type: "private", name: "private-db" }],
+  subnetSpecs: [
+    { type: "Public", name: "public" },
+    { type: "Private", name: "private-db" }
+  ],
 });
 
 // S3 static site for frontend
@@ -47,6 +50,14 @@ if (enableCloudFront) {
     },
     defaultRootObject: "index.html",
     priceClass: "PriceClass_100",
+    restrictions: {
+      geoRestriction: {
+        restrictionType: "none",
+      },
+    },
+    viewerCertificate: {
+      cloudfrontDefaultCertificate: true,
+    },
   });
   cfDomain = dist.domainName;
 }
@@ -90,10 +101,11 @@ new aws.ec2.SecurityGroupRule("db-from-api", {
 });
 
 // EC2 (Amazon Linux 2023)
-const ami = aws.getAmiOutput({
-  owners: ["137112412989"], filters: [{ name:"name", values:["al2023-ami-*-x86_64"] }],
+const ami = pulumi.output(aws.ec2.getAmi({
+  owners: ["137112412989"],
+  filters: [{ name: "name", values: ["al2023-ami-*-x86_64"] }],
   mostRecent: true,
-});
+}));
 const userData = `#!/bin/bash
 set -eux
 dnf install -y docker
@@ -120,9 +132,8 @@ EOV
 EOF
 chmod +x /opt/app/fetch_env.sh
 `;
-
 const api = new aws.ec2.Instance("api-ec2", {
-  ami: ami.id, instanceType: "t3.micro",
+  ami: ami.apply(a => a.id), instanceType: "t3.micro",
   subnetId: vpc.publicSubnetIds[0],
   vpcSecurityGroupIds: [apiSg.id],
   iamInstanceProfile: profile.name,
@@ -130,6 +141,7 @@ const api = new aws.ec2.Instance("api-ec2", {
   keyName: "your-keypair-name", // or use SSM Session Manager instead of SSH
   tags: { Name: "api-ec2" },
 });
+
 
 // CloudWatch basic alarms (you can add SNS later)
 new aws.cloudwatch.MetricAlarm("ec2CpuHigh", {
