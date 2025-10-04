@@ -1,0 +1,7 @@
+config:
+  aws:region: us-east-1
+  fullstack-cloud:dbName: appdb
+  fullstack-cloud:dbUser: appuser
+  fullstack-cloud:dbPassword:
+    secure: AAABAHkh5K1T7J/CH9CBbRaI9fJG0u6MZ0BK03xayFEW2LTjufQALTsIs1Od1y+BILbjntdWiA==
+  fullstack-cloud:enableCloudFront: "true"

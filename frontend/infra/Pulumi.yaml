@@ -1,0 +1,3 @@
+name: fullstack-cloud
+runtime: nodejs
+description: S3 (frontend), EC2 (backend), RDS (Postgres), IAM, SGs, CloudWatch
